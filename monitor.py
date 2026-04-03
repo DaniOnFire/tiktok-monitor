@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from telegram import Bot
 from TikTokApi import TikTokApi
+from playwright.async_api import async_playwright
 
 # ─── CONFIGURAZIONE ───────────────────────────────────────
 TELEGRAM_TOKEN = "8786183518:AAENcmBXOrBUuwCgNILJKadT92BdeF7y1qA"
@@ -12,8 +13,8 @@ TIKTOK_USER    = "alessiadeda0"
 CHECK_INTERVAL = 300
 DATA_FILE      = "last_videos.json"
 MS_TOKEN       = "ZzpfbRkeud6rv2pGast6Jf_4yl540i2w4Ydltj3xXlUPJZjGUEdG-1CgQ_2TSEK0EHZBgEb7DSLTEu03rpQVm899AWrdJws8jtGaSXfiCiRgtLHLQrUeE4L3IDfHEnHzUl6NtnJa0WpU"
-ORA_INIZIO     = 8.5   # 8:30
-ORA_FINE       = 24.0  # 00:00 (mezzanotte)
+ORA_INIZIO     = 8.5
+ORA_FINE       = 24.0
 # ──────────────────────────────────────────────────────────
 
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -40,8 +41,9 @@ async def get_latest_videos(username):
             await api.create_sessions(
                 ms_tokens=[MS_TOKEN],
                 num_sessions=1,
-                sleep_after=3,
-                headless=True
+                sleep_after=5,
+                headless=True,
+                override_browser_args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
             )
             user = api.user(username)
             async for video in user.videos(count=10):
