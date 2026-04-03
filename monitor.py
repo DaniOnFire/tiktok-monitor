@@ -6,15 +6,22 @@ from telegram import Bot
 from TikTokApi import TikTokApi
 
 # ─── CONFIGURAZIONE ───────────────────────────────────────
-TELEGRAM_TOKEN = "8786183518:AAGlH8j4ettuMtdQ8TKYRIcsGpTs7M8GStA"
+TELEGRAM_TOKEN = "8786183518:AAENcmBXOrBUuwCgNILJKadT92BdeF7y1qA"
 CHAT_ID        = "291979788"
 TIKTOK_USER    = "alessiadeda0"
 CHECK_INTERVAL = 300
 DATA_FILE      = "last_videos.json"
-MS_TOKEN       = "RCtJqmMZGDUkUu3mrEg9-6uEVqpTCZgWjdfahWLJ9A55ESxKjQNJaE3QaaD6TCo-uKLKOVev-eJuGKH5HvPhlDJA6oNXE7k-9UAEFAzHLYzuZMaM13MNK-Mlg3Zih7cwjlMVliFMkeG8"
+MS_TOKEN       = "ZzpfbRkeud6rv2pGast6Jf_4yl540i2w4Ydltj3xXlUPJZjGUEdG-1CgQ_2TSEK0EHZBgEb7DSLTEu03rpQVm899AWrdJws8jtGaSXfiCiRgtLHLQrUeE4L3IDfHEnHzUl6NtnJa0WpU"
+ORA_INIZIO     = 8.5   # 8:30
+ORA_FINE       = 24.0  # 00:00 (mezzanotte)
 # ──────────────────────────────────────────────────────────
 
 bot = Bot(token=TELEGRAM_TOKEN)
+
+def is_orario_attivo():
+    ora = datetime.now()
+    ora_decimale = ora.hour + ora.minute / 60
+    return ORA_INIZIO <= ora_decimale < ORA_FINE
 
 def load_known_videos():
     if os.path.exists(DATA_FILE):
@@ -74,19 +81,22 @@ async def monitor():
         print(f"Trovati {len(known_ids)} video esistenti. In attesa di nuovi...")
 
     while True:
-        print(f"[{datetime.now()}] Controllo nuovi video...")
-        videos = await get_latest_videos(TIKTOK_USER)
+        if is_orario_attivo():
+            print(f"[{datetime.now()}] Controllo nuovi video...")
+            videos = await get_latest_videos(TIKTOK_USER)
 
-        new_videos = [v for v in videos if v["id"] not in known_ids]
+            new_videos = [v for v in videos if v["id"] not in known_ids]
 
-        if new_videos:
-            for video in new_videos:
-                print(f"[NUOVO] {video['desc']}")
-                await send_notification(video)
-                known_ids.append(video["id"])
-            save_known_videos(known_ids)
+            if new_videos:
+                for video in new_videos:
+                    print(f"[NUOVO] {video['desc']}")
+                    await send_notification(video)
+                    known_ids.append(video["id"])
+                save_known_videos(known_ids)
+            else:
+                print("Nessun nuovo video.")
         else:
-            print("Nessun nuovo video.")
+            print(f"[{datetime.now()}] Fuori orario (08:30 - 00:00), in pausa...")
 
         await asyncio.sleep(CHECK_INTERVAL)
 
