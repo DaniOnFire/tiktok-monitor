@@ -17,7 +17,7 @@ ORA_FINE       = 24.0
 # Cookie presi da Chrome
 SESSION_ID   = "41d66333816c3399037d05a73c832cf2"
 MS_TOKEN     = "nk8hu-HTZLF2EK-wMeup4CoOMDR0dC2kECXKPmBqCq9ZQleT5G-FQUYNbEKq_ESqLYj8aQWLg69NacxmgkO1KEpQnhIEw-PVsoKoesTjvPuwFdt4wuotDHh7RgSjeaqDmA6MFBajM65g"
-TT_WEBID     = "1%7C9Elw1GanP2L6lN2KghVEvlS6eAzb_Z7QknMavrsydk0%7C1775311193%7C53be0394e13ba3c7b2dc902c3dc71070a1d7aeb0a8d54841176ee36e0374917c"
+TT_WID     = "1%7C9Elw1GanP2L6lN2KghVEvlS6eAzb_Z7QknMavrsydk0%7C1775311193%7C53be0394e13ba3c7b2dc902c3dc71070a1d7aeb0a8d54841176ee36e0374917c"
 # ──────────────────────────────────────────────────────────
 
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -25,7 +25,7 @@ bot = Bot(token=TELEGRAM_TOKEN)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.tiktok.com/",
-    "Cookie": f"sessionid={SESSION_ID}; msToken={MS_TOKEN}; tt_webid_v2={TT_WEBID};"
+    "Cookie": f"sessionid={SESSION_ID}; msToken={MS_TOKEN}; tt_wid={TT_WID};"
 }
 
 def is_orario_attivo():
