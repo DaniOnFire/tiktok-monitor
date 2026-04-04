@@ -36,23 +36,24 @@ def get_latest_videos():
     videos = []
     try:
         url = f"https://rsshub.app/tiktok/user/@{TIKTOK_USER}"
+        # Impostiamo headers come se fosse un browser vero
+        feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         feed = feedparser.parse(url)
 
-        if feed.bozo and not feed.entries:
-            print(f"[WARN] Feed non valido: {feed.bozo_exception}")
-            return videos
-
-        for entry in feed.entries[:10]:
-            title    = entry.get("title", "Nessuna descrizione")
-            link     = entry.get("link", "")
-            video_id = entry.get("id", link).strip().split("/")[-1]
-            videos.append({
-                "id":    video_id,
-                "url":   link,
-                "desc":  title,
-                "likes": 0,
-            })
-        print(f"[OK] Trovati {len(videos)} video nel feed")
+        if feed.entries:
+            for entry in feed.entries[:10]:
+                title    = entry.get("title", "Nessuna descrizione")
+                link     = entry.get("link", "")
+                video_id = entry.get("id", link).strip().split("/")[-1]
+                videos.append({
+                    "id":    video_id,
+                    "url":   link,
+                    "desc":  title,
+                    "likes": 0,
+                })
+            print(f"[OK] Trovati {len(videos)} video nel feed")
+        else:
+            print(f"[WARN] Feed vuoto o bloccato")
     except Exception as e:
         print(f"[ERRORE] Recupero video: {e}")
     return videos
