@@ -36,21 +36,32 @@ def save_known_videos(video_ids):
 def get_latest_videos():
     videos = []
     try:
-        # Usiamo Proxitok - frontend alternativo TikTok con RSS
         url = f"https://rsshub.app/tiktok/user/@alessiadeda0"
         headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(url, headers=headers, timeout=15)
-        root = ET.fromstring(r.text)
-        channel = root.find("channel")
-        for item in channel.findall("item")[:10]:
-            title = item.findtext("title", "Nessuna descrizione")
-            link  = item.findtext("link", "")
-            guid  = item.findtext("guid", link)
-            video_id = guid.split("/")[-1] if guid else link
+        
+        # Pulizia del testo prima del parsing
+        testo = r.text
+        testo = testo.encode('utf-8', errors='replace').decode('utf-8')
+        
+        root = ET.fromstring(testo)
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        
+        # Prova prima con items standard RSS
+        items = root.findall('.//item')
+        # Se non trova nulla prova con entry Atom
+        if not items:
+            items = root.findall('.//atom:entry', ns)
+
+        for item in items[:10]:
+            title = item.findtext('title') or item.findtext('atom:title', namespaces=ns) or "Nessuna descrizione"
+            link  = item.findtext('link') or item.findtext('atom:link', namespaces=ns) or ""
+            guid  = item.findtext('guid') or item.findtext('atom:id', namespaces=ns) or link
+            video_id = guid.strip().split("/")[-1]
             videos.append({
                 "id":   video_id,
-                "url":  link,
-                "desc": title,
+                "url":  link.strip(),
+                "desc": title.strip(),
                 "likes": 0,
             })
     except Exception as e:
