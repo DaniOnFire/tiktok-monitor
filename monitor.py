@@ -1,10 +1,9 @@
 import asyncio
 import json
 import os
+import requests
 from datetime import datetime
 from telegram import Bot
-from TikTokApi import TikTokApi
-from playwright.async_api import async_playwright
 
 # ─── CONFIGURAZIONE ───────────────────────────────────────
 TELEGRAM_TOKEN = "8786183518:AAENcmBXOrBUuwCgNILJKadT92BdeF7y1qA"
@@ -12,12 +11,22 @@ CHAT_ID        = "291979788"
 TIKTOK_USER    = "alessiadeda0"
 CHECK_INTERVAL = 300
 DATA_FILE      = "last_videos.json"
-MS_TOKEN       = "ZzpfbRkeud6rv2pGast6Jf_4yl540i2w4Ydltj3xXlUPJZjGUEdG-1CgQ_2TSEK0EHZBgEb7DSLTEu03rpQVm899AWrdJws8jtGaSXfiCiRgtLHLQrUeE4L3IDfHEnHzUl6NtnJa0WpU"
 ORA_INIZIO     = 8.5
 ORA_FINE       = 24.0
+
+# Cookie presi da Chrome
+SESSION_ID   = "41d66333816c3399037d05a73c832cf2"
+MS_TOKEN     = "nk8hu-HTZLF2EK-wMeup4CoOMDR0dC2kECXKPmBqCq9ZQleT5G-FQUYNbEKq_ESqLYj8aQWLg69NacxmgkO1KEpQnhIEw-PVsoKoesTjvPuwFdt4wuotDHh7RgSjeaqDmA6MFBajM65g"
+TT_WEBID     = "1%7C9Elw1GanP2L6lN2KghVEvlS6eAzb_Z7QknMavrsydk0%7C1775311193%7C53be0394e13ba3c7b2dc902c3dc71070a1d7aeb0a8d54841176ee36e0374917c"
 # ──────────────────────────────────────────────────────────
 
 bot = Bot(token=TELEGRAM_TOKEN)
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.tiktok.com/",
+    "Cookie": f"sessionid={SESSION_ID}; msToken={MS_TOKEN}; tt_webid_v2={TT_WEBID};"
+}
 
 def is_orario_attivo():
     ora = datetime.now()
@@ -34,25 +43,25 @@ def save_known_videos(video_ids):
     with open(DATA_FILE, "w") as f:
         json.dump(video_ids, f)
 
-async def get_latest_videos(username):
+def get_user_secuid(username):
+    url = f"https://www.tiktok.com/api/user/detail/?uniqueId={username}&aid=1988&app_language=it&device_platform=web_pc"
+    r = requests.get(url, headers=HEADERS, timeout=10)
+    data = r.json()
+    return data["userInfo"]["user"]["secUid"]
+
+def get_latest_videos(sec_uid):
     videos = []
     try:
-        async with TikTokApi() as api:
-            await api.create_sessions(
-                ms_tokens=[MS_TOKEN],
-                num_sessions=1,
-                sleep_after=5,
-                headless=True,
-                override_browser_args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-            )
-            user = api.user(username)
-            async for video in user.videos(count=10):
-                videos.append({
-                    "id":    str(video.id),
-                    "url":   f"https://www.tiktok.com/@{username}/video/{video.id}",
-                    "desc":  video.as_dict.get("desc", "Nessuna descrizione"),
-                    "likes": video.as_dict.get("stats", {}).get("diggCount", 0),
-                })
+        url = f"https://www.tiktok.com/api/post/item_list/?secUid={sec_uid}&count=10&cursor=0&aid=1988&device_platform=web_pc"
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        data = r.json()
+        for item in data.get("itemList", []):
+            videos.append({
+                "id":    item["id"],
+                "url":   f"https://www.tiktok.com/@{TIKTOK_USER}/video/{item['id']}",
+                "desc":  item.get("desc", "Nessuna descrizione"),
+                "likes": item.get("stats", {}).get("diggCount", 0),
+            })
     except Exception as e:
         print(f"[ERRORE] Recupero video: {e}")
     return videos
@@ -73,11 +82,16 @@ async def send_notification(video):
 
 async def monitor():
     print(f"[{datetime.now()}] Monitoraggio avviato per @alessiadeda0")
+    
+    print("Recupero secUid utente...")
+    sec_uid = get_user_secuid(TIKTOK_USER)
+    print(f"secUid trovato: {sec_uid[:20]}...")
+
     known_ids = load_known_videos()
 
     if not known_ids:
         print("Prima esecuzione: salvo i video esistenti...")
-        videos = await get_latest_videos(TIKTOK_USER)
+        videos = get_latest_videos(sec_uid)
         known_ids = [v["id"] for v in videos]
         save_known_videos(known_ids)
         print(f"Trovati {len(known_ids)} video esistenti. In attesa di nuovi...")
@@ -85,7 +99,7 @@ async def monitor():
     while True:
         if is_orario_attivo():
             print(f"[{datetime.now()}] Controllo nuovi video...")
-            videos = await get_latest_videos(TIKTOK_USER)
+            videos = get_latest_videos(sec_uid)
 
             new_videos = [v for v in videos if v["id"] not in known_ids]
 
@@ -98,7 +112,7 @@ async def monitor():
             else:
                 print("Nessun nuovo video.")
         else:
-            print(f"[{datetime.now()}] Fuori orario (08:30 - 00:00), in pausa...")
+            print(f"[{datetime.now()}] Fuori orario, in pausa...")
 
         await asyncio.sleep(CHECK_INTERVAL)
 
