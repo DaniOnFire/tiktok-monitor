@@ -1,10 +1,9 @@
 import asyncio
 import json
 import os
-import requests
+import feedparser
 from datetime import datetime
 from telegram import Bot
-import xml.etree.ElementTree as ET
 
 # ─── CONFIGURAZIONE ───────────────────────────────────────
 TELEGRAM_TOKEN = "8786183518:AAENcmBXOrBUuwCgNILJKadT92BdeF7y1qA"
@@ -36,34 +35,24 @@ def save_known_videos(video_ids):
 def get_latest_videos():
     videos = []
     try:
-        url = f"https://rsshub.app/tiktok/user/@alessiadeda0"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=15)
-        
-        # Pulizia del testo prima del parsing
-        testo = r.text
-        testo = testo.encode('utf-8', errors='replace').decode('utf-8')
-        
-        root = ET.fromstring(testo)
-        ns = {'atom': 'http://www.w3.org/2005/Atom'}
-        
-        # Prova prima con items standard RSS
-        items = root.findall('.//item')
-        # Se non trova nulla prova con entry Atom
-        if not items:
-            items = root.findall('.//atom:entry', ns)
+        url = f"https://rsshub.app/tiktok/user/@{TIKTOK_USER}"
+        feed = feedparser.parse(url)
 
-        for item in items[:10]:
-            title = item.findtext('title') or item.findtext('atom:title', namespaces=ns) or "Nessuna descrizione"
-            link  = item.findtext('link') or item.findtext('atom:link', namespaces=ns) or ""
-            guid  = item.findtext('guid') or item.findtext('atom:id', namespaces=ns) or link
-            video_id = guid.strip().split("/")[-1]
+        if feed.bozo and not feed.entries:
+            print(f"[WARN] Feed non valido: {feed.bozo_exception}")
+            return videos
+
+        for entry in feed.entries[:10]:
+            title    = entry.get("title", "Nessuna descrizione")
+            link     = entry.get("link", "")
+            video_id = entry.get("id", link).strip().split("/")[-1]
             videos.append({
-                "id":   video_id,
-                "url":  link.strip(),
-                "desc": title.strip(),
+                "id":    video_id,
+                "url":   link,
+                "desc":  title,
                 "likes": 0,
             })
+        print(f"[OK] Trovati {len(videos)} video nel feed")
     except Exception as e:
         print(f"[ERRORE] Recupero video: {e}")
     return videos
@@ -88,6 +77,10 @@ async def monitor():
     if not known_ids:
         print("Prima esecuzione: salvo i video esistenti...")
         videos = get_latest_videos()
+        if not videos:
+            print("[WARN] Nessun video trovato alla prima esecuzione, riprovo tra 30s...")
+            await asyncio.sleep(30)
+            videos = get_latest_videos()
         known_ids = [v["id"] for v in videos]
         save_known_videos(known_ids)
         print(f"Trovati {len(known_ids)} video esistenti. In attesa di nuovi...")
