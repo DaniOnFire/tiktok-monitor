@@ -35,7 +35,7 @@ def save_known_videos(video_ids):
 def get_latest_videos():
     videos = []
     try:
-        url = f"https://rsshub.app/tiktok/user/@{TIKTOK_USER}"
+        url = f"d-production-bf75.up.railway.app/tiktok/user/@{TIKTOK_USER}"
         # Impostiamo headers come se fosse un browser vero
         feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         feed = feedparser.parse(url)
