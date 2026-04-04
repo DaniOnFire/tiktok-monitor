@@ -37,7 +37,7 @@ def get_latest_videos():
     videos = []
     try:
         # Usiamo Proxitok - frontend alternativo TikTok con RSS
-        url = f"https://proxitok.pabloferreiro.es/@{TIKTOK_USER}/rss"
+        url = f"https://rsshub.app/tiktok/user/@alessiadeda0"
         headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(url, headers=headers, timeout=15)
         root = ET.fromstring(r.text)
