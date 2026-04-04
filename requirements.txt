@@ -1,3 +1,2 @@
-TikTokApi
+requests
 python-telegram-bot
-playwright
